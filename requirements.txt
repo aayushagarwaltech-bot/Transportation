@@ -6,3 +6,5 @@ joblib
 pyyaml
 requests
 numpy
+streamlit
+matplotlib

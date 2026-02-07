@@ -36,6 +36,13 @@ if metrics_path.exists():
 # Load test data for feature names
 test_df = pd.read_csv(test_path) if test_path.exists() else None
 
+if test_df is None:
+    st.error("❌ Test data not found. Run: python run_pipeline.py")
+    st.stop()
+
+# Get feature names (exclude target and components)
+feature_names = [col for col in test_df.columns if col not in ['cnt', 'casual', 'registered']]
+
 # Display metrics
 if metrics:
     col1, col2 = st.columns(2)
@@ -45,40 +52,58 @@ if metrics:
         st.metric("R² Score", f"{metrics['r2']:.4f}")
 
 st.divider()
-
-# Simple input form
 st.subheader("📊 Enter Conditions")
 
+# Create input columns
 col1, col2 = st.columns(2)
+
 with col1:
     season = st.select_slider("Season", [1, 2, 3, 4], value=2, help="1=Spring, 2=Summer, 3=Fall, 4=Winter")
-    temp = st.slider("Temperature", 0.0, 1.0, 0.5)
-    hum = st.slider("Humidity", 0.0, 1.0, 0.5)
+    mnth = st.slider("Month", 1, 12, 6)
+    temp = st.slider("Temperature (0-1)", 0.0, 1.0, 0.5)
+    hum = st.slider("Humidity (0-1)", 0.0, 1.0, 0.5)
 
 with col2:
-    mnth = st.slider("Month", 1, 12, 6)
-    windspeed = st.slider("Wind Speed", 0.0, 1.0, 0.2)
-    weathersit = st.select_slider("Weather", [1, 2, 3, 4], value=1, help="1=Clear, 2=Mist, 3=Light Rain, 4=Heavy")
+    yr = st.radio("Year", [0, 1], format_func=lambda x: f"Year {x}")
+    weekday = st.select_slider("Weekday", [0, 1, 2, 3, 4, 5, 6], value=2, help="0=Sunday...6=Saturday")
+    atemp = st.slider("Feels-like Temp (0-1)", 0.0, 1.0, 0.5)
+    windspeed = st.slider("Wind Speed (0-1)", 0.0, 1.0, 0.2)
 
-# Predict
-if st.button("🔮 Predict", use_container_width=True):
-    if test_df is not None:
-        feature_names = test_df.drop(columns=['cnt']).columns.tolist()
+# Additional options
+holiday = st.checkbox("Is Holiday?")
+workingday = st.checkbox("Is Working Day?", value=True)
+weathersit = st.select_slider("Weather", [1, 2, 3, 4], value=1, help="1=Clear, 2=Mist, 3=Light Rain, 4=Heavy")
+
+# Predict button
+if st.button("🔮 Predict Demand", use_container_width=True):
+    try:
+        # Build input dict with all features
+        input_dict = {
+            'season': season,
+            'yr': float(yr),
+            'mnth': mnth,
+            'holiday': float(holiday),
+            'weekday': weekday,
+            'workingday': float(workingday),
+            'weathersit': weathersit,
+            'temp': temp,
+            'atemp': atemp,
+            'hum': hum,
+            'windspeed': windspeed
+        }
         
-        # Build input
-        input_dict = {col: 0 for col in feature_names}
-        input_dict['season'] = season
-        input_dict['mnth'] = mnth
-        input_dict['temp'] = temp
-        input_dict['hum'] = hum
-        input_dict['windspeed'] = windspeed
-        input_dict['weathersit'] = weathersit
-        
+        # Create input array in correct feature order
         X = np.array([input_dict[col] for col in feature_names]).reshape(1, -1)
+        
+        # Make prediction
         pred = model.predict(X)[0]
         
-        st.success(f"### 🎯 Predicted Demand: **{int(pred)} bikes**")
-        st.info(f"Estimated range: {max(0, int(pred-50))} - {int(pred+50)} bikes")
+        st.success(f"### 🎯 Predicted Demand: **{int(pred):,} bikes**")
+        st.info(f"Estimated range: {max(0, int(pred-100)):,} - {int(pred+100):,} bikes")
+        
+    except Exception as e:
+        st.error(f"❌ Prediction error: {str(e)}")
+        st.write(f"Features expected: {feature_names}")
 
 st.divider()
-st.caption("🔗 Repository: [Transportation](https://github.com/aayushagarwaltech-bot/Transportation)")
+st.caption("🔗 [Transportation Repository](https://github.com/aayushagarwaltech-bot/Transportation)")

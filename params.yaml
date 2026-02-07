@@ -1,0 +1,18 @@
+dataset:
+  url: "https://archive.ics.uci.edu/ml/machine-learning-databases/00275/Bike-Sharing-Dataset.zip"
+  raw_path: "data/raw/day.csv"
+
+preprocessing:
+  test_size: 0.2
+  random_state: 42
+
+features:
+  drop_columns: ["instant", "dteday"]
+
+model:
+  n_estimators: 100
+  random_state: 42
+
+mlflow:
+  experiment_name: "traffic_prediction"
+  tracking_uri: "file:./mlruns"
